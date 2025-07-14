@@ -1,14 +1,14 @@
 <?php
 	$servidor = "localhost";
 	$usuario = "root";
-	$senha = "joa@2019";
+	$senha = "senha";
 	$banco = "cemiterio";
 	
-	//Criar a conexão
+	//Criar a conexÃ£o
 	$conn = mysqli_connect($servidor, $usuario, $senha, $banco);
 
 	if(!$conn){
-		die("Falha na Conexão: ".mysqli_connect_error());
+		die("Falha na ConexÃ£o: ".mysqli_connect_error());
 	}else{
 		//echo "Conectado com sucesso";
 	}
