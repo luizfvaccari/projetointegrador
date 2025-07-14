@@ -1,185 +1,162 @@
 <?php
-	header('Content-Type: text/html; charset=utf-8');
+// imprimirfaf.php
+header('Content-Type: text/html; charset=utf-8'); // Garante a codificaÁ„o UTF-8
+session_start(); // Inicia a sess„o (se vocÍ usa para autenticaÁ„o)
+include_once("conexao.php"); // Inclui o arquivo de conex„o com o banco de dados
+
+// Bloco de verificaÁ„o de login (descomente e configure se o login for obrigatÛrio)
+/*
+if (!isset($_SESSION['email']) || !isset($_SESSION['senha'])) {
+    header("Location: login.php"); // Redireciona para a p·gina de login se n„o estiver logado
+    exit;
+}
+*/
+
+$registro = null; // Vari·vel para armazenar os dados do registro da FAF
+$mensagem_erro = ""; // Para exibir mensagens de erro
+
+// 1. Verifica se o ID do registro foi passado via URL (mÈtodo GET)
+if (isset($_GET['id']) && !empty($_GET['id'])) {
+    $id_faf = intval($_GET['id']); // Captura o ID e garante que È um n˙mero inteiro
+
+    // Verifica se a conex„o com o banco de dados foi estabelecida com sucesso
+    if ($conn) {
+        // 2. Prepara a consulta SQL para buscar o registro especÌfico usando Prepared Statement
+        // Isso previne SQL Injection e È essencial para a seguranÁa
+        $sql_select = "SELECT * FROM faf WHERE id = ?";
+        $stmt_select = $conn->prepare($sql_select);
+
+        // Verifica se a preparaÁ„o da query falhou
+        if ($stmt_select === false) {
+            error_log("Erro ao preparar a consulta em imprimirfaf.php: " . $conn->error);
+            $mensagem_erro = "Erro interno ao preparar a consulta. Tente novamente mais tarde.";
+        } else {
+            // 3. Vincula o ID ao Prepared Statement ("i" para inteiro)
+            $stmt_select->bind_param("i", $id_faf);
+
+            // 4. Executa a consulta
+            $stmt_select->execute();
+            $resultado = $stmt_select->get_result(); // ObtÈm o resultado da consulta
+
+            // 5. Verifica se o registro foi encontrado
+            if ($resultado->num_rows > 0) {
+                $registro = $resultado->fetch_assoc(); // ObtÈm os dados do registro como um array associativo
+            } else {
+                $mensagem_erro = "Nenhum registro encontrado com o ID " . htmlspecialchars($id_faf) . ".";
+            }
+            $stmt_select->close(); // Fecha o statement
+        }
+    } else {
+        $mensagem_erro = "Erro: Conex„o com o banco de dados n„o estabelecida.";
+    }
+} else {
+    $mensagem_erro = "ID do registro n„o fornecido para impress„o.";
+}
+
+$conn->close(); // Fecha a conex„o com o banco de dados
 ?>
 
-<?php
-	session_start();
-	include_once("conexao.php");
-?>
-
-<?php
-/*	session_start();
-	$email = $_SESSION['email'];
-	if(!isset($_SESSION['email']) || !isset($_SESSION['senha'])){
-		header("Location:login.php");
-		exit;
-	} else {
-		echo "FAF impressa por $email";
-	}*/
-?>
-
-
-<html>
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<link href="css/print.css" rel="stylesheet">
-	<link rel="stylesheet" type="text/css" href="css/jquery-ui.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imprimir FAF - ID <?php echo isset($id_faf) ? htmlspecialchars($id_faf) : ''; ?></title>
+    <link href="css/default.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/jquery-ui.min.css">
     <link href="css/foundation.css" rel="stylesheet">
-	<title>Imprimir FAF</title>	
+    <style>
+        body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; margin: 30px; line-height: 1.5; color: #333; }
+        .container-imprimir { max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { text-align: center; color: #000; margin-bottom: 15px; }
+        h1 { font-size: 18pt; margin-top: 0; }
+        h2 { font-size: 14pt; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; }
+        .section-header { font-weight: bold; border-bottom: 1px solid #000; margin-top: 25px; padding-bottom: 5px; font-size: 13pt; }
+        .info-item { display: flex; margin-bottom: 8px; }
+        .info-item strong { flex-shrink: 0; width: 180px; margin-right: 10px; color: #555; }
+        .info-item span { flex-grow: 1; border-bottom: 1px dotted #ccc; padding-bottom: 2px; }
+        .full-width { display: block; width: 100%; margin-bottom: 15px; }
+        .alerta { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .botao-voltar { display: block; width: 200px; margin: 20px auto; padding: 10px 20px; background-color: #007bff; color: white; text-align: center; text-decoration: none; border-radius: 5px; }
+        .botao-voltar:hover { background-color: #0056b3; }
+
+        @media print {
+            body { margin: 0; }
+            .container-imprimir { border: none; box-shadow: none; padding: 0; margin: 0; }
+            .botao-voltar { display: none; } /* Esconde o bot„o de voltar na impress„o */
+        }
+    </style>
 </head>
 <body>
-<script language="javascript">
-	function imprime(text){
-		text=document
-		print(text)
-	}
-</script>
-<center><input type="button" class="button" style="align:right" name="imprimir" value="Imprimir" onclick="imprime()" />
-<br />
-<img align="center" src="img/cabecalhofaf.png"/></center>
-<form class="faf">
+    <div class="container-imprimir">
+        <?php if (!empty($mensagem_erro)): ?>
+            <p class="alerta"><?php echo htmlspecialchars($mensagem_erro); ?></p>
+            <a href="consultarfaf.php" class="botao-voltar">Voltar para a Consulta</a>
+        <?php elseif ($registro): ?>
+            <h1>FICHA DE AUTORIZA«√O FUNER¡RIA (FAF)</h1>
+            <p style="text-align: right; font-size: 0.9em; margin-top: -10px;">ID da FAF: **<?php echo htmlspecialchars($registro['id']); ?>**</p>
 
-<ul>
-	
-	<?php
-		$falecido=$_POST['falecido'];
-		$sql = "SELECT * FROM faf WHERE falecido LIKE  '%".$falecido."%'";
-		$res = mysqli_query($conn, $sql);
-		$row = mysqli_num_rows($res);
-		if ($row>0){
-			While($linha = mysqli_fetch_array($res)){
-				
-				//Dados da FAF
-				$id = $linha['id'];
-				
-				//Dados do Falecido
-				$falecido = $linha['falecido'];
-				$sexo = $linha['sexo'];
-				$rg_falecido = $linha['rg_falecido'];
-				$cpf_falecido = $linha['cpf_falecido'];
-				$end_falecido = $linha['end_falecido'];
-				$end_num_falecido = $linha['end_num_falecido'];
-				$end_comp_falecido = $linha['end_comp_falecido'];
-				$cep_falecido = $linha['cep_falecido'];
-				$bairro_falecido = $linha['bairro_falecido'];
-				$cidade_falecido = $linha['cidade_falecido'];
-				$uf_falecido = $linha['uf_falecido'];
-				$pai_falecido = $linha['pai_falecido'];
-				$mae_falecido = $linha['mae_falecido'];
-				$data_nasc_falecido = $linha['data_nasc_falecido'];
-				$data_falecimento = $linha['data_falecimento'];
-				$idade_falecido = $linha['idade_falecido'];
-				$est_civil_falecido = $linha['est_civil_falecido'];
-				
-				//Dados do √ìbito
-				$loc_falecimento = $linha['loc_falecimento'];
-				$causa_mortis = $linha['causa_mortis'];
-				$num_dec_obito = $linha['num_dec_obito'];
-				$autopiciado = $linha['autopiciado'];
-				$medico = $linha['medico'];
-				$crm = $linha['crm'];
-				$obs_obito = $linha['obs_obito'];
-				
-				//Dados do Sepultamento
-				$cemiterio = $linha['cemiterio'];
-				$possui_terreno = $linha['possui_terreno'];
-				$alvara = $linha['alvara'];
-				$funeraria = $linha['funeraria'];
-				$escolha = $linha['escolha'];
-				$taxa = $linha['taxa'];
-				$obs_sepultamento = $linha['obs_sepultamento'];
-				
-				//Dados do Declarante
-				$declarante = $linha['declarante'];
-				$sexo_declarante = $linha['sexo_declarante'];
-				$rg_declarante = $linha['rg_declarante'];
-				$cpf_declarante = $linha['cpf_declarante'];
-				$end_declarante = $linha['end_declarante'];
-				$end_num_declarante = $linha['end_num_declarante'];
-				$end_comp_declarante = $linha['end_comp_declarante'];
-				$cep_declarante = $linha['cep_declarante'];
-				$bairro_declarante = $linha['bairro_declarante'];
-				$cidade_declarante = $linha['cidade_declarante'];
-				$uf_declarante = $linha['uf_declarante'];
-				$parentesco_declarante = $linha['parentesco_declarante'];
-				$fone_declarante = $linha['fone_declarante'];
-				$celular_declarante = $linha['celular_declarante'];
-				$email_declarante = $linha['email_declarante'];
-				
-				//Imprimir Cabe√ßalho
-				echo "<p align=right><strong>FAF Online: </strong>$id</p>";
-				
-				//Imprimir dados do FALECIDO
-				echo "<center><strong>:: 1 :: Dados do Falecido ::</strong></center>";
-				echo "<strong>Falecido: </strong>$falecido";
-				echo "<strong>  Sexo: </strong>$sexo";
-				echo "<strong>RG: </strong>$rg_falecido";
-				echo "<strong>  CPF: </strong>$cpf_falecido<br />";
-				echo "<strong>Endere√ßo: </strong>$end_falecido";
-				echo "<strong>  N√∫mero: </strong>$end_num_falecido";
-				echo "<strong>  Complemento: </strong>$end_comp_falecido<br />";
-				echo "<strong>CEP: </strong>$cep_falecido";
-				echo "<strong>  Bairro: </strong>$bairro_falecido";
-				echo "<strong>  Cidade: </strong>$cidade_falecido";
-				echo "<strong> UF: </strong>$uf_falecido<br />";
-				echo "<strong>Pai: </strong>$pai_falecido";
-				echo "<strong>  M√£e: </strong>$mae_falecido<br />";
-				echo "<strong>  Nascimento: </strong>$data_nasc_falecido";
-				echo "<strong>  Falecimento: </strong>$data_falecimento";
-				echo "<strong> Idade: </strong>$idade_falecido";
-				echo "<strong>  Estado Civil: </strong>$est_civil_falecido<br />";
-				
-				//Imprimir dados do √ìbito
-				echo "<br /><center><strong>:: 2 :: Dados do √ìbito ::</strong></center>";
-				echo "<strong>Local do Falecimento: </strong>$loc_falecimento<br />";
-				echo "<strong>  Causa Mortis: </strong>$causa_mortis<br />";
-				echo "<strong>N√∫mero da Declara√ß√£o de √ìbito: </strong>$num_dec_obito";
-				echo "<strong>  Autopiciado(a): </strong>$autopiciado<br />";
-				echo "<strong>M√©dico(a): </strong>$medico";
-				echo "<strong>  CRM: </strong>$crm<br />";
-				echo "<strong>Observa√ß√µes do √ìbito: </strong>$end_comp_falecido<br />";
-				
-				//Imprimir dados do Sepultamento
-				echo "<br /><center><strong>:: 3 :: Dados do Sepultamento ::</strong></center>";
-				echo "<strong>Cemiterio: </strong>$cemiterio<br />";
-				echo "<strong>  J√° possuia terreno?: </strong>$possui_terreno";
-				echo "<strong> N√∫mero do Alvar√°: </strong>$alvara<br />";
-				echo "<strong>Funer√°ria que prestou o servi√ßo: </strong>$funeraria<br />";
-				echo "<strong>Tipo de Escolha: </strong>$escolha";
-				echo "<strong>Gerar taxa?: </strong>$taxa<br />";
-				echo "<strong>Observa√ß√µes do Sepultamento: </strong>$obs_sepultamento<br />";
-				
-				//Imprimir dados do Declarante
-				echo "<br /><center><strong>:: 4 :: Dados do Declarante ::</strong></center>";
-				echo "<strong>Declarante: </strong>$declarante";
-				echo "<strong>  Sexo: </strong>$sexo_declarante";
-				echo "<strong>  RG: </strong>$rg_declarante";
-				echo "<strong>  CPF: </strong>$cpf_declarante<br />";
-				echo "<strong>Endere√ßo: </strong>$end_declarante";
-				echo "<strong>  N√∫mero: </strong>$end_num_declarante";
-				echo "<strong>  Complemento: </strong>$end_comp_declarante<br />";
-				echo "<strong>CEP: </strong>$cep_declarante";
-				echo "<strong>  Bairro: </strong>$bairro_declarante";
-				echo "<strong>  Cidade: </strong>$cidade_declarante";
-				echo "<strong> UF: </strong>$uf_declarante<br />";
-				echo "<strong>Parentesco: </strong>$parentesco_declarante";
-				echo "<strong>  Telefone: </strong>$fone_declarante<br />";
-				echo "<strong>  Celular: </strong>$celular_declarante";
-				echo "<strong>  Email: </strong>$email_declarante<br />";
-			
-			}	
-			
-		} else{
-			echo "<br /> <hr /><center>Sua pesquisa n√£o corresponde a nenhum registro em nosso banco de dados!</center>";
-			echo "<center>Verifique e tente novamente!</center>";
-			
-		}
-	?>
+            <div class="section-header">DADOS DO FALECIDO</div>
+            <div class="info-item"><strong>Nome Completo:</strong> <span><?php echo htmlspecialchars($registro['falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Sexo:</strong> <span><?php echo htmlspecialchars($registro['sexo'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>RG:</strong> <span><?php echo htmlspecialchars($registro['rg_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>CPF:</strong> <span><?php echo htmlspecialchars($registro['cpf_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>EndereÁo:</strong> <span><?php echo htmlspecialchars(($registro['end_falecido'] ?? '') . ' n∫ ' . ($registro['end_num_falecido'] ?? '') . ' ' . ($registro['end_comp_falecido'] ?? '')) ; ?></span></div>
+            <div class="info-item"><strong>Bairro:</strong> <span><?php echo htmlspecialchars($registro['bairro_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Cidade/UF:</strong> <span><?php echo htmlspecialchars(($registro['cidade_falecido'] ?? '') . ' / ' . ($registro['uf_falecido'] ?? '')) ; ?></span></div>
+            <div class="info-item"><strong>CEP:</strong> <span><?php echo htmlspecialchars($registro['cep_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Nome do Pai:</strong> <span><?php echo htmlspecialchars($registro['pai_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Nome da M„e:</strong> <span><?php echo htmlspecialchars($registro['mae_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Data Nascimento:</strong> <span><?php echo htmlspecialchars($registro['data_nasc_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Idade:</strong> <span><?php echo htmlspecialchars($registro['idade_falecido'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Estado Civil:</strong> <span><?php echo htmlspecialchars($registro['est_civil_falecido'] ?? 'N/A'); ?></span></div>
 
-</ul>
+            <div class="section-header">DADOS DO ”BITO</div>
+            <div class="info-item"><strong>Data Falecimento:</strong> <span><?php echo htmlspecialchars($registro['data_falecimento'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Local Falecimento:</strong> <span><?php echo htmlspecialchars($registro['loc_falecimento'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Causa Mortis:</strong> <span><?php echo htmlspecialchars($registro['causa_mortis'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>N∫ DeclaraÁ„o ”bito:</strong> <span><?php echo htmlspecialchars($registro['num_dec_obito'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Autopiciado:</strong> <span><?php echo htmlspecialchars($registro['autopiciado'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>MÈdico:</strong> <span><?php echo htmlspecialchars($registro['medico'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>CRM:</strong> <span><?php echo htmlspecialchars($registro['crm'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Obs. ”bito:</strong> <span><?php echo htmlspecialchars($registro['obs_obito'] ?? 'N/A'); ?></span></div>
 
+            <div class="section-header">DADOS DO SEPULTAMENTO</div>
+            <div class="info-item"><strong>CemitÈrio:</strong> <span><?php echo htmlspecialchars($registro['cemiterio'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Possui Terreno:</strong> <span><?php echo htmlspecialchars($registro['possui_terreno'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Alvar·:</strong> <span><?php echo htmlspecialchars($registro['alvara'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Funer·ria:</strong> <span><?php echo htmlspecialchars($registro['funeraria'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Escolha:</strong> <span><?php echo htmlspecialchars($registro['escolha'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Taxa:</strong> <span><?php echo htmlspecialchars($registro['taxa'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Obs. Sepultamento:</strong> <span><?php echo htmlspecialchars($registro['obs_sepultamento'] ?? 'N/A'); ?></span></div>
 
-</form>
+            <div class="section-header">DADOS DO DECLARANTE</div>
+            <div class="info-item"><strong>Nome Completo:</strong> <span><?php echo htmlspecialchars($registro['declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Sexo:</strong> <span><?php echo htmlspecialchars($registro['sexo_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>RG:</strong> <span><?php echo htmlspecialchars($registro['rg_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>CPF:</strong> <span><?php echo htmlspecialchars($registro['cpf_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>EndereÁo:</strong> <span><?php echo htmlspecialchars(($registro['end_declarante'] ?? '') . ' n∫ ' . ($registro['end_num_declarante'] ?? '') . ' ' . ($registro['end_comp_declarante'] ?? '')) ; ?></span></div>
+            <div class="info-item"><strong>Bairro:</strong> <span><?php echo htmlspecialchars($registro['bairro_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Cidade/UF:</strong> <span><?php echo htmlspecialchars(($registro['cidade_declarante'] ?? '') . ' / ' . ($registro['uf_declarante'] ?? '')) ; ?></span></div>
+            <div class="info-item"><strong>CEP:</strong> <span><?php echo htmlspecialchars($registro['cep_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Parentesco:</strong> <span><?php echo htmlspecialchars($registro['parentesco_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Telefone:</strong> <span><?php echo htmlspecialchars($registro['fone_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Celular:</strong> <span><?php echo htmlspecialchars($registro['celular_declarante'] ?? 'N/A'); ?></span></div>
+            <div class="info-item"><strong>Email:</strong> <span><?php echo htmlspecialchars($registro['email_declarante'] ?? 'N/A'); ?></span></div>
 
+            <br><br><br>
+            <p style="text-align: center; margin-top: 50px;">
+                _______________________________________<br>
+                Assinatura do Declarante
+            </p>
+            <p style="text-align: center; margin-top: 20px; font-size: 0.9em;">
+                Data de Impress„o: <?php echo date('d/m/Y H:i:s'); ?>
+            </p>
+
+            <a href="javascript:window.print()" class="botao-voltar" style="background-color: #28a745;">Imprimir Documento</a>
+            <a href="consultarfaf.php" class="botao-voltar">Voltar para a Consulta</a>
+
+        <?php endif; ?>
+    </div>
 </body>
 </html>

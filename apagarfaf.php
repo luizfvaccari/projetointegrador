@@ -1,0 +1,68 @@
+<?php
+// apagarfaf.php
+header('Content-Type: text/html; charset=utf-8'); // Garante a codificação UTF-8
+session_start(); // Inicia a sessão para acesso a variáveis de sessão
+include_once("conexao.php"); // Inclui o arquivo de conexão com o banco de dados
+
+// Bloco de verificação de login (descomente e configure se o login for obrigatório)
+/*
+if (!isset($_SESSION['email']) || !isset($_SESSION['senha'])) {
+    header("Location: login.php"); // Redireciona para a página de login se não estiver logado
+    exit;
+}
+*/
+
+$mensagem_status = ""; // Variável para armazenar a mensagem de sucesso ou erro
+
+// 1. Verifica se o ID do registro foi passado via URL (método GET)
+if (isset($_GET['id']) && !empty($_GET['id'])) {
+    // Captura o ID do registro a ser apagado e sanitiza (converte para inteiro)
+    $id_faf_apagar = intval($_GET['id']); // intval() garante que é um número inteiro
+
+    // Verifica se a conexão com o banco de dados foi estabelecida com sucesso
+    if ($conn) {
+        // 2. Prepara a consulta SQL para exclusão usando Prepared Statement
+        // Isso é crucial para prevenir ataques de SQL Injection
+        $sql_delete = "DELETE FROM faf WHERE id = ?";
+        $stmt_delete = $conn->prepare($sql_delete);
+
+        // Verifica se a preparação da query SQL falhou
+        if ($stmt_delete === false) {
+            // Loga o erro para depuração (útil em ambiente de produção)
+            error_log("Erro ao preparar a declaração de exclusão: " . $conn->error);
+            $mensagem_status = "Erro interno ao preparar a exclusão. Tente novamente.";
+        } else {
+            // 3. Vincula o parâmetro ao Prepared Statement
+            // "i" indica que o parâmetro $id_faf_apagar é um inteiro
+            $stmt_delete->bind_param("i", $id_faf_apagar);
+
+            // 4. Executa a exclusão no banco de dados
+            if ($stmt_delete->execute()) {
+                // 5. Verifica se alguma linha foi realmente afetada (registro apagado)
+                if ($stmt_delete->affected_rows > 0) {
+                    $mensagem_status = "Registro ID " . $id_faf_apagar . " apagado com sucesso!";
+                } else {
+                    $mensagem_status = "Nenhum registro encontrado com o ID " . $id_faf_apagar . " para apagar, ou já foi removido.";
+                }
+            } else {
+                // Se a execução da query falhar
+                error_log("Erro ao executar a exclusão: " . $stmt_delete->error);
+                $mensagem_status = "Erro ao apagar registro: " . $stmt_delete->error;
+            }
+            $stmt_delete->close(); // Fecha o statement
+        }
+    } else {
+        $mensagem_status = "Erro: Conexão com o banco de dados não estabelecida.";
+    }
+} else {
+    // Se o ID não foi fornecido na URL
+    $mensagem_status = "Requisição inválida: ID do registro não fornecido para exclusão.";
+}
+
+$conn->close(); // Fecha a conexão com o banco de dados
+
+// Redireciona o usuário de volta para a página de consulta/listagem
+// A mensagem de status é passada via parâmetro de URL (urlencode para segurança de caracteres)
+header("Location: consultarfaf.php?status_exclusao=" . urlencode($mensagem_status));
+exit; // Garante que nenhum outro código PHP seja executado após o redirecionamento
+?>
