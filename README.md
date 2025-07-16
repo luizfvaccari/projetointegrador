@@ -37,3 +37,5 @@ A ideia inicial é, aprovação dentro da disciplina Projeto Integrador, mas, o 
 
 ## Acesso Temporário:
 - https://suporte.joacaba.sc.gov.br
+Acesso: luiz.vaccari
+Senha: 123456
